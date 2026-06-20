@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.exception_handlers import (
     http_exception_handler,
     request_validation_exception_handler,
@@ -9,15 +9,15 @@ from fastapi.exception_handlers import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import models
+from config import settings
 from database import Base, engine, get_db
 from routers import posts, users
-from config import settings
 
 
 @asynccontextmanager
@@ -157,6 +157,24 @@ async def account_page(request: Request):
         {"title": "Account"},
     )
 
+@app.get("/forgot-password", include_in_schema=False)
+async def forgot_password_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "forgot_password.html",
+        {"title": "Forgot Password"},
+    )
+
+
+@app.get("/reset-password", include_in_schema=False)
+async def reset_password_page(request: Request):
+    response = templates.TemplateResponse(
+        request,
+        "reset_password.html",
+        {"title": "Reset Password"},
+    )
+    response.headers["Referrer-Policy"] = "no-referrer" # We add this header to prevent the token from being leaked in the Referer header when the user clicks the reset link in their email and is redirected to the reset password page. This is a security best practice to protect sensitive information like tokens from being exposed to third parties.
+    return response
 
 @app.exception_handler(StarletteHTTPException)
 async def general_http_exception_handler(
